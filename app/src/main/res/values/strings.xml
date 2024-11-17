@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Weather App</string>
+    <string name="sunrise_text_heading">Sunrise &amp; Sunset</string>
+    <string name="sunset_icon_desc">SunsetIcon</string>
 </resources>
