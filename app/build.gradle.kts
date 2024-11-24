@@ -81,4 +81,7 @@ dependencies {
     // Instrumentation Testing
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
+
+    implementation ("com.google.android.gms:play-services-location:21.0.1")
+
 }
