@@ -1,23 +1,28 @@
 package com.nirmal.baby.weatherapp.ui.main
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.bumptech.glide.Glide
 import com.nirmal.baby.weatherapp.R
+import com.nirmal.baby.weatherapp.adapters.DailyRecyclerAdapter
 import com.nirmal.baby.weatherapp.adapters.HorizontalRecyclerAdapter
+import com.nirmal.baby.weatherapp.data.WeatherItemsDaily
+import com.nirmal.baby.weatherapp.data.WeatherRepository
 import com.nirmal.baby.weatherapp.data.WeatherItemsHourly
 import com.nirmal.baby.weatherapp.databinding.ActivityMainBinding
+import com.nirmal.baby.weatherapp.factory.MainActivityViewModelFactory
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var viewModel: MainActivityViewModel
     private lateinit var horizontalRecyclerAdapter: HorizontalRecyclerAdapter
+    private lateinit var dailyRecyclerAdapter: DailyRecyclerAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,13 +31,25 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        viewModel = ViewModelProvider(this)[MainActivityViewModel::class.java]
+        // Create WeatherRepository instance
+        val repository = WeatherRepository()
 
-        // Initialize RecyclerView Adapter
+        // Pass WeatherRepository to ViewModelFactory
+        val factory = MainActivityViewModelFactory(repository)
+        viewModel = ViewModelProvider(this, factory)[MainActivityViewModel::class.java]
+
+        // Initialize Hourly RecyclerView Adapter
         horizontalRecyclerAdapter = HorizontalRecyclerAdapter(emptyList())
         binding.horizontalRecyclerView.layoutManager =
             LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
         binding.horizontalRecyclerView.adapter = horizontalRecyclerAdapter
+
+        // Initialize Daily RecyclerView Adapter
+        dailyRecyclerAdapter = DailyRecyclerAdapter(emptyList())
+        binding.dailyRecyclerView.layoutManager =
+            LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
+        binding.dailyRecyclerView.adapter = dailyRecyclerAdapter
+
 
         // Observe ViewModel data
         viewModel.weatherData.observe(this) { data ->
@@ -45,6 +62,12 @@ class MainActivity : AppCompatActivity() {
                 textViewValueUv.text = "${data.current.uv}"
                 textViewValueHumidity.text = "${data.current.humidity}%"
                 textViewValueWind.text = "${data.current.wind_kph} km/h"
+                textViewSunriseValue.text = data.forecast.forecastday[0].astro.sunrise
+                textViewSunsetValue.text = data.forecast.forecastday[0].astro.sunset
+
+                Glide.with(this@MainActivity)
+                    .load("https:${data.current.condition.icon}")
+                    .into(weatherConditionImageMain)
 
                 // Get the current time
                 val currentTime = Calendar.getInstance().time
@@ -53,7 +76,7 @@ class MainActivity : AppCompatActivity() {
                 // Extract current hour explicitly from the `current` section
                 val nowWeatherItem = WeatherItemsHourly(
                     temperature = "${data.current.temp_c}°C",
-                    iconResId = R.drawable.sample, // Replace with actual icon mapping logic
+                    iconUrl = "https:${data.current.condition.icon}",
                     time = "Now"
                 )
 
@@ -64,8 +87,18 @@ class MainActivity : AppCompatActivity() {
                 }.map { hour ->
                     WeatherItemsHourly(
                         temperature = "${hour.temp_c}°C",
-                        iconResId = R.drawable.sample, // Replace with actual icon mapping logic
+                        iconUrl = "https:${hour.condition.icon}",
                         time = hour.time.split(" ")[1] // Extract time part
+                    )
+                }
+
+                // Map 3-day forecast data
+                val dailyData = data.forecast.forecastday.map { day ->
+                    WeatherItemsDaily(
+                        date = formatDate(day.date),
+                        iconUrl = "https:${day.day.condition.icon}",
+                        high = day.day.maxtemp_c.toString(),
+                        low = day.day.mintemp_c.toString()
                     )
                 }
 
@@ -74,7 +107,7 @@ class MainActivity : AppCompatActivity() {
 
                 // Update RecyclerView
                 horizontalRecyclerAdapter.updateData(finalData)
-
+                dailyRecyclerAdapter.updateData(dailyData)
             }
         }
 
@@ -91,5 +124,19 @@ class MainActivity : AppCompatActivity() {
 
         // Fetch Weather Data
         viewModel.fetchWeather("London, Ontario")
+    }
+
+    private fun formatDate(dateString: String): String {
+        // The input date format from the API
+        val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        // The desired output format
+        val outputFormat = SimpleDateFormat("EEEE, MMM d", Locale.getDefault())
+
+        return try {
+            val date = inputFormat.parse(dateString) // Parse the input date
+            outputFormat.format(date!!) // Format to desired output
+        } catch (e: Exception) {
+            "Invalid Date" // Fallback in case of an error
+        }
     }
 }

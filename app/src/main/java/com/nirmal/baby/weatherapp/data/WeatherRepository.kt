@@ -15,7 +15,7 @@ class WeatherRepository {
         return apiService.getWeatherData(
             apiKey = "aef73390620d4eb080912325231611",
             location = location,
-            days = 1,
+            days = 3,
             aqi = "no",
             alerts = "no"
         )

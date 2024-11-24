@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.nirmal.baby.weatherapp.R
 import com.nirmal.baby.weatherapp.data.WeatherItemsHourly
 
@@ -27,8 +28,12 @@ class HorizontalRecyclerAdapter(
     override fun onBindViewHolder(holder: WeatherViewHolder, position: Int) {
         val item = weatherItems[position]
         holder.temperatureTextView.text = item.temperature
-        holder.weatherIconImageView.setImageResource(item.iconResId)
         holder.timeTextView.text = item.time
+
+        // Load weather icon using Glide
+        Glide.with(holder.weatherIconImageView.context)
+            .load(item.iconUrl)
+            .into(holder.weatherIconImageView)
     }
 
     override fun getItemCount(): Int = weatherItems.size
